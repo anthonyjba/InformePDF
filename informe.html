@@ -1,0 +1,346 @@
+﻿<!DOCTYPE html>
+<html lang="es" data-ng-app="app">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Informe - Analiza Rústica</title>
+    <meta name="description" content="Informe de ARH - AC">
+    <meta name="author" content="Analiza Rustica">
+
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="lib/bootstrap/bootstrap-3.3.6/css/bootstrap.min.css">
+    <!-- Openlayer -->
+    <!-- Iconos font-awesome -->
+    <link rel="stylesheet" href="lib/font-awesome/font-awesome-4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/informe/descargaRegresion.css" title="DownloadReg">
+    <link rel="stylesheet" type="text/css" href="/css/informe/informe.css">
+    <link rel="stylesheet" type="text/css" media="print" href="/css/informe/print.css">
+</head>
+
+<body>
+
+    <!-- Pantalla de espera al cargar el ARHs -->
+    <div class="modal fade bs-example-modal-sm " id="myPleaseWait" tabindex="-1"
+         role="dialog" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-sm" style="margin-top: 200px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div id="textoVentanaCarga">
+                        <h4 class="modal-title">
+                            <span class="glyphicon glyphicon-time"></span> Generando el informe...
+                        </h4>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-info
+					progress-bar-striped active"
+                             style="width: 100%">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <section ng-controller="informeController as infctrl" ng-init="infctrl.init()" ng-cloak>
+
+        <page size="A4">
+
+            <div id="headerPage">
+                <div class="banner"><img class="img-responsive" src="images/logo_gob_esp.jpg"></div>
+                <div class="title"><h1> ARH : {{infctrl.ARH}} - AC : {{infctrl.AC}}</h1></div>
+            </div>
+
+            <blockquote>
+                <p>
+                    En este informe inicia con sólo las muestras calificadas que tiene un total de <strong>{{infctrl.resultados[0].result.TOT_MUESTR}}</strong> muestras.<br />
+                    Y con un valor medio calculado de: <strong>{{infctrl.resultados[0].result.VALOR_MED_HECT_CAL}} €/ha</strong>.
+                </p>
+                <p>
+                    <h2><strong><u>Paso 1:</u></strong></h2>
+                    En este paso se han excluido un cantidad de <strong>{{infctrl.resultados[1].result.NRO_MUESTR_EXC}}</strong> muestras con el siguiente filtro.<br />
+                    <strong>Filtro Aplicado:</strong> Outlier Valor Superior de: <strong>{{infctrl.resultados[1].result.FILTER.OutValSup}} €/ha</strong>.
+                </p>
+            </blockquote>
+
+            <center>
+                <div id="mapaPaso1"></div>
+                <div style="text-align: center; width:450px;">
+                    <table class='CSSTableGenerator'>
+                        <tr>
+                            <td>Total de muestras</td>
+                            <td>Nro. muestras incluídas</td>
+                            <td>Nro. muestras excluídas</td>
+                            <td>Valor Medio filtrado</td>
+                        </tr>
+                        <tr>
+                            <td>{{infctrl.resultados[1].result.TOT_NRO_MUESTR}}</td>
+                            <td>{{infctrl.resultados[1].result.NRO_MUESTR_INC}}</td>
+                            <td>{{infctrl.resultados[1].result.NRO_MUESTR_EXC}}</td>
+                            <td>{{infctrl.resultados[1].result.VALOR_MEDIO | number}} €/ha</td>
+                        </tr>
+                    </table>
+                </div>
+            </center>
+        </page>
+        <div class="saltopagina"></div>
+
+        <div ng-if="infctrl.resultados[1].result.NRO_MUESTR_EXC > 0" ng-repeat="page in infctrl.resultados[1].result.PAGES">
+            <page size="A4">
+                <div id="headerPage">
+                    <div class="banner"><img class="img-responsive" src="images/logo_gob_esp.jpg"></div>
+                    <div class="title" style="float: right;"><h1> ARH : {{infctrl.ARH}} - AC : {{infctrl.AC}}</h1></div>
+                </div>
+
+                <blockquote>
+                    <h3><strong><u>Paso 1</u> - Listado de muestras excluidas:</strong></h3>
+                    <table class="table table-condensed table-font">
+                        <tr>
+                            <th>ID</th>
+                            <th>Ref.Catastral</th>
+                            <th>Cultivo</th>
+                            <th>Superficie(ha)</th>
+                            <th>Valor Trans.(€)</th>
+                            <th>Valor Unit.(€/ha)</th>
+                            <th>Fecha</th>
+                        </tr>
+                        <tr ng-repeat="muestra in infctrl.resultados[1].result.REG_MUESTR_EXC | limitTo:30:page.start">
+                            <td>{{muestra.ID_MUESTRA}}</td>
+                            <td>{{muestra.PCAT1}}{{muestra.PCAT2}}</td>
+                            <td>{{muestra.CC}}</td>
+                            <td>{{muestra.SUPERFICIE}}</td>
+                            <td>{{muestra.VTRA | number}}</td>
+                            <td>{{muestra.VTRAS_SUP | number}}</td>
+                            <td>{{muestra.FEFEC}}</td>
+                        </tr>
+                    </table>
+                </blockquote>
+
+            </page>
+            <div class="saltopagina"></div>
+        </div>
+
+        <div ng-if="infctrl.mostrarPaso2">
+            <page size="A4">
+                <div id="headerPage">
+                    <div class="banner"><img class="img-responsive" src="images/logo_gob_esp.jpg"></div>
+                    <div class="title"><h1> ARH : {{infctrl.ARH}} - AC : {{infctrl.AC}}</h1></div>
+                </div>
+
+                <blockquote>
+                    <h2><strong><u>Paso 2:</u></strong></h2>
+                    <p>
+                        En este paso se han excluido un cantidad de <strong>{{infctrl.resultados[2].result.NRO_MUESTR_EXC}}</strong> muestras con el siguiente filtro.<br />
+                        <strong>Filtro Aplicado:</strong>  Muestras mayores a (Percentil 85) de: <strong>{{infctrl.resultados[2].result.FILTER.p85 | number}}</strong>.
+                    <p />
+                </blockquote>
+
+                <center>
+                    <div id="mapaPaso2"></div>
+                    <div style="text-align: center; width:450px;">
+                        <table class='CSSTableGenerator'>
+                            <tr>
+                                <td>Total de muestras</td>
+                                <td>Nro. muestras incluídas</td>
+                                <td>Nro. muestras excluídas</td>
+                                <td>Valor Medio filtrado</td>
+                            </tr>
+                            <tr>
+                                <td>{{infctrl.resultados[2].result.TOT_NRO_MUESTR}}</td>
+                                <td>{{infctrl.resultados[2].result.NRO_MUESTR_INC}}</td>
+                                <td>{{infctrl.resultados[2].result.NRO_MUESTR_EXC}}</td>
+                                <td>{{infctrl.resultados[2].result.VALOR_MEDIO | number}} €/ha</td>
+                            </tr>
+                        </table>
+                    </div>
+                </center>
+
+                <!-- Gráfico de Distribución -->
+                <div style="text-align: center;">
+                    <h3><strong><u>Gráfico de distribución:</u></strong></h3>
+                    <div class="col-md-8 col-md-offset-2 morepadding">
+                        <canvas id="distGraph" width="600" height="350"></canvas>
+                    </div>
+                </div>
+            </page>
+        </div>
+        <div class="saltopagina"></div>
+
+        <div ng-if="infctrl.resultados[2].result.NRO_MUESTR_EXC > 0" ng-repeat="page in infctrl.resultados[2].result.PAGES">
+            <page size="A4">
+                <div id="headerPage">
+                    <div class="banner"><img class="img-responsive" src="images/logo_gob_esp.jpg"></div>
+                    <div class="title"><h1> ARH : {{infctrl.ARH}} - AC : {{infctrl.AC}}</h1></div>
+                </div>
+
+                <blockquote>
+                    <h3><strong><u>Paso 2</u> - Listado de muestras excluidas:</strong></h3>
+                    <table class="table table-condensed table-font">
+                        <tr>
+                            <th>ID {{p2index}}</th>
+                            <th>Ref.Catastral</th>
+                            <th>Cultivo</th>
+                            <th>Superficie(ha)</th>
+                            <th>Valor Trans.(€)</th>
+                            <th>Valor Unit.(€/ha)</th>
+                            <th>Fecha</th>
+                        </tr>
+
+                        <tbody>
+                            <tr ng-repeat="muestra in infctrl.resultados[2].result.REG_MUESTR_EXC | limitTo:30:page.start">
+                                <td>{{muestra.ID_MUESTRA}}</td>
+                                <td>{{muestra.PCAT1}}{{muestra.PCAT2}}</td>
+                                <td>{{muestra.CC}}</td>
+                                <td>{{muestra.SUPERFICIE}}</td>
+                                <td>{{muestra.VTRA | number}}</td>
+                                <td>{{muestra.VTRAS_SUP | number}}</td>
+                                <td>{{muestra.FEFEC}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </blockquote>
+
+            </page>
+            <div class="saltopagina"></div>
+        </div>
+
+        <div ng-if="infctrl.mostrarPaso3">
+            <page size="A4">
+                <div id="headerPage">
+                    <div class="banner"><img class="img-responsive" src="images/logo_gob_esp.jpg"></div>
+                    <div class="title"><h1> ARH : {{infctrl.ARH}} - AC : {{infctrl.AC}}</h1></div>
+                </div>
+
+                <blockquote>
+                    <h2><strong><u>Paso 3:</u></strong></h2>
+                    <p>
+                        En este paso se han excluido un cantidad de <strong>{{infctrl.resultados[3].result.NRO_MUESTR_EXC}}</strong> muestras con el siguiente filtro.<br />
+                        <strong>Filtro Aplicado:</strong>  Outlier Inferior: <strong>{{infctrl.resultados[3].result.FILTER.OUTLET_INF | number}}</strong> y Outlier Superior: <strong>{{infctrl.resultados[3].result.FILTER.OUTLET_SUP | number}}</strong>.
+                    <p />
+                </blockquote>
+
+                <center>
+                    <div id="mapaPaso3"></div>
+                    <div style="text-align: center; width:450px;">
+                        <table class='CSSTableGenerator'>
+                            <tr>
+                                <td>Total de muestras</td>
+                                <td>Nro. muestras incluídas</td>
+                                <td>Nro. muestras excluídas</td>
+                                <td>Valor Medio filtrado</td>
+                            </tr>
+                            <tr>
+                                <td>{{infctrl.resultados[3].result.TOT_NRO_MUESTR}}</td>
+                                <td>{{infctrl.resultados[3].result.NRO_MUESTR_INC}}</td>
+                                <td>{{infctrl.resultados[3].result.NRO_MUESTR_EXC}}</td>
+                                <td>{{infctrl.resultados[3].result.VALOR_MEDIO | number}} €/ha</td>
+                            </tr>
+                        </table>
+                    </div>
+                </center>
+
+                <!-- Gráfico de Regresión -->
+                <div style="text-align: center">
+                    <h3><strong><u>Gráfico de regresión logarítmica:</u></strong></h3>
+                    <div class="col-md-12" style="margin-top:5px;">
+                        <div id="desRegresionLOG" class="regresionPanel" width="400" height="300"></div>
+                    </div>
+                    <div class="col-md-12" style="margin-top:5px;margin-left:10px;">
+                        <div id="resumenLOG"></div>
+                    </div>
+                </div>
+            </page>
+        </div>
+        <div class="saltopagina"></div>
+
+        <div ng-if="infctrl.resultados[3].result.NRO_MUESTR_EXC > 0" ng-repeat="page in infctrl.resultados[3].result.PAGES">
+            <page size="A4">
+                <div id="headerPage">
+                    <div class="banner"><img class="img-responsive" src="images/logo_gob_esp.jpg"></div>
+                    <div class="title"><h1> ARH : {{infctrl.ARH}} - AC : {{infctrl.AC}}</h1></div>
+                </div>
+
+                <blockquote>
+                    <h3><strong><u>Paso 3</u> - Listado de muestras excluidas:</strong></h3>
+                    <table class="table table-condensed table-font">
+                        <tr>
+                            <th>ID {{p2index}}</th>
+                            <th>Ref.Catastral</th>
+                            <th>Cultivo</th>
+                            <th>Superficie(ha)</th>
+                            <th>Valor Trans.(€)</th>
+                            <th>Valor Unit.(€/ha)</th>
+                            <th>Fecha</th>
+                        </tr>
+
+                        <tbody>
+                            <tr ng-repeat="muestra in infctrl.resultados[3].result.REG_MUESTR_EXC | limitTo:30:page.start">
+                                <td>{{muestra.ID_MUESTRA}}</td>
+                                <td>{{muestra.PCAT1}}{{muestra.PCAT2}}</td>
+                                <td>{{muestra.CC}}</td>
+                                <td>{{muestra.SUPERFICIE}}</td>
+                                <td>{{muestra.VTRA | number}}</td>
+                                <td>{{muestra.VTRAS_SUP | number}}</td>
+                                <td>{{muestra.FEFEC}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </blockquote>
+
+            </page>
+            <div ng-if="$index != (infctrl.resultados[3].result.PAGES.length-1)" class="saltopagina"></div>
+        </div>
+
+    </section>
+    <!-- LIBRERIAS-->
+    <!-- Bootstrap -->
+    <script src="lib/jquery/2.1.3/jquery.min.js"></script>
+    <script src="lib\bootstrap\bootstrap-3.3.6\js\bootstrap.min.js"></script>
+
+    <!-- Angular -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
+    <script src="lib/angular/angular-locale_es-es.js"></script>
+    <!-- sanitize -->
+    <!--<script src="lib/angular/angular-sanitize.min.js"></script>-->
+    <!-- Animate -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-animate.js"></script>
+    <!-- ChartJS -->
+    <script src="lib/moment/2.11.2/moment.js"></script>
+    <script src="lib/ChartJS/ChartMod.js" type="text/javascript"></script>
+    <!-- d3 -->
+    <script src="lib/d3/d3.min.js"></script>
+    <script src="lib/d3/topojson.v1.min.js"></script>
+    <!-- Simple_statistics -->
+    <script src="lib/simple_statistics/simple_statistics.min.js"></script>
+
+    <script type="text/javascript">
+        angular.module('app', []);
+    </script>
+    <!--<script src="public/app.js"></script>-->
+    <script src="app/properties.js"></script>
+    <script src="app/utilidades/validArrayProtoype.js"></script>
+    <script src="appInforme/informeController.js"></script>
+    <script src="appInforme/informeMap.service.js"></script>
+    <script src="appInforme/calculoValorARH.service.js"></script>
+    <script src="app/dictionaryService.js"></script>
+    <script src="app/utilidades/servicioUtilidades.js"></script>
+    <script src="app/muestrasService.js"></script>
+    <script src="app/poblacionService.js"></script>
+    <script src="appInforme/regressionGraph.service.js"></script>
+    <script src="appInforme/distributionGraph.service.js"></script>
+
+    <!-- Diccionarios -->
+    <script type="text/javascript" src="data/diccionarios.js"></script>
+    <script type="text/javascript" src="data/Cubo/Percentiles/Perc_superf_parcelas.js"></script>
+
+    <!-- Capas-->
+    <script type="text/javascript" src="data/Capas/topoJson/ARH_2016_25000_topo.json"></script>
+
+</body>
+
+</html>
