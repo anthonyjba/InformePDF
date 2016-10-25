@@ -149,8 +149,8 @@
                     tooltip.transition()
                          .duration(200)
                          .style("opacity", .9);
-                    tooltip.html("<div class='g-rc'>Referencia: " + d["PCAT1"] + d["PCAT2"] + "</div>" + (config.type === 'LOG' ? "Log[Sp: " + Math.round(d.ejeH * 100) / 100 : "Sup: " + d.ejeH)
-                      + " m², " + (config.type === 'LOG' ? "VT: " + Math.round(d.ejeV * 100) / 100 + "]" : "V.Tras: " + d.ejeV))
+                    tooltip.html("<div class='g-rc'>Referencia: " + d["PCAT1"] + d["PCAT2"] + "</div>" + (config.type === 'LOG' ? "Log[Sp: " + d['LOG_SUPERFICIE'].toFixed(2) : "Sup: " + d['SUPERFICIE'])
+                      + " m², " + (config.type === 'LOG' ? "VT: " + d["LOG_VTRA"].toFixed(2) + "]" : "V.Tras: " + d["VTRA"]))
                          .style("left", (d3.event.offsetX + 15) + "px")
                          .style("top", (d3.event.offsetY - 45) + "px");
                 })
@@ -204,16 +204,8 @@
                 }
                 else {
 
-                    //Calculo del valor medio de la regression
-                    var sum_Val_Unit = 0, tot_muestr = 0;
-                    data.forEach(function (d) {
-                        sum_Val_Unit += (linReg.b + (linReg.m * d.ejeH)) * 10000 / d.ejeH;
-                        tot_muestr++;
-                    })
-                    config.valorReg = sum_Val_Unit / tot_muestr;
-
                     //print resume values in template
-                    var html = "<span style='padding-left: 10%;'>Ecuaci&oacute;n modelo:&nbsp;&nbsp;&nbsp;Valor = " +Math.round(linReg.b * 100) / 100 + " + " +Math.round(linReg.m * 100) / 100 + " * Superficie</span>";
+                    var html = "Ecuaci&oacute;n modelo:&nbsp;&nbsp;&nbsp;Valor = " +Math.round(linReg.b * 100) / 100 + " + " +Math.round(linReg.m * 100) / 100 + " * Superficie";
                     d3.select("#resumenLIN").html(html);
 
                 }
@@ -227,7 +219,7 @@
             if (config.data.length === 0)
                 return false;
 
-            var lrdata = []
+            var lrdata = [];
             config.data.forEach(function (d) {
                 d.ejeH = d[config.ejeHorizontal.column];
                 d.ejeV = d[config.ejeVertical.column];
@@ -241,14 +233,23 @@
             //Set R cuadrado
             config.rSquared = ss.rSquared(lrdata, regressionLine);
 
-            //Residuos LOG
-            var mapResiduos = [];
+            //Residuos
+            var mapResiduos = [], acumulateReg = [];
+
             config.data.forEach(function (d) {
                 d['residuos' + config.type] = Number((d.ejeV - (config.linearRegression.b + (config.linearRegression.m * d.ejeH))).toFixed(2));
                 mapResiduos.push(d['residuos' + config.type]);
+                acumulateReg.push((config.linearRegression.b + (config.linearRegression.m * d.ejeH)) * 10000 / d.ejeH);
             });
 
+            //Set datos del Resumen modelo
             config.resumen_modelo = getCalculateModelo(mapResiduos, config.rSquared);
+
+            //Calculo del valor medio de la regression
+            config.valorReg = ss.mean(acumulateReg);
+
+            //Calculo del valor mediana de la regression
+            config.valorMedianaReg = ss.median(acumulateReg);
 
             var IQ = config.resumen_modelo.Q3 - config.resumen_modelo.Q1;
             

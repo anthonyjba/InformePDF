@@ -41,7 +41,7 @@
         /**********************FUNCION QUE SE EJECUTA AL CARGAR LA PAGINA************************************************/
         vm.init = function () {
             $('#myPleaseWait').modal('show');
-            vm.mostrarPaso1 = vm.mostrarPaso2 = vm.mostrarPaso3 = true;
+            vm.mostrarPaso1 = vm.mostrarPaso2 = vm.mostrarPaso3 = vm.mostrarPaso4 = true;
 
             $timeout(function () {
 
@@ -69,85 +69,53 @@
                     }
                     $q.all(promises)
                     .then(function (data) {
+                        var mf;
 
+                        try{
+                        
+                            /***** POBLACION ****/
+                            var poblacionARH = data.poblacion;
+                            if (poblacionARH.length > 0) {
+                                poblacionARH = servicioUtilidades.decompressJson(poblacionARH);
+                                poblacionARH = poblacionARH.filter(function (reg) {
+                                    return reg.AC === vm.AC
+                                });
+                            }
+                            vm.getFeaturesByARH(vm.ARH);
 
-                        /***** POBLACION ****/
-                        var poblacionARH = data.poblacion;
-                        if (poblacionARH.length > 0) {
-                            poblacionARH = servicioUtilidades.decompressJson(poblacionARH);
-                            poblacionARH = poblacionARH.filter(function (reg) {
-                                return reg.AC === vm.AC
-                            });
-                        }
-                        vm.getFeaturesByARH(vm.ARH);
+                            /***** MUESTRAS ****/
+                            var filtroPasoActual = {};
+                            var filtroMuestrasARH = { ARH: { valor: arh }, AC: { valor: ac }, ESTA: { valor: 2 } };
 
-                        /***** MUESTRAS ****/
-                        var filtroPasoActual = {};
-                        var filtroMuestrasARH = { ARH: { valor: arh }, AC: { valor: ac }, ESTA: { valor: 2 } };
+                            vm.datosMuestras_ARH_AC = servicioUtilidades.decompressJson(muestrasService.getMuestras(filtroMuestrasARH, ['ID_MUESTRA', 'ARH', 'AC', 'ESTA', 'COORX', 'COORY', 'PCAT1', 'PCAT2', 'CC', 'SUPERFICIE', 'SUP_SUBPARCELA', 'VTRA', 'FEFEC']));
 
-                        vm.datosMuestras_ARH_AC = servicioUtilidades.decompressJson(muestrasService.getMuestras(filtroMuestrasARH, ['ID_MUESTRA', 'ARH', 'AC', 'ESTA', 'COORX', 'COORY', 'PCAT1', 'PCAT2', 'CC', 'SUPERFICIE', 'SUP_SUBPARCELA', 'VTRA', 'FEFEC']));
+                            /***********************
+                            Instancia CalculoValor    
+                            ***********************/
+                            var cvs = new calculoValorService(vm.datosMuestras_ARH_AC, vm.datosARH_AC);
 
-                        /***********************
-                        Instancia CalculoValor    
-                        ***********************/
-                        var cvs = new calculoValorService(vm.datosMuestras_ARH_AC, vm.datosARH_AC);
-
-                        // Almacenamos los valores iniciales de un ARH-AC
-                        var dg = {
-                            ARH: vm.datosARH_AC.ARH,
-                            AC: vm.datosARH_AC.AC,
-                            TOT_MUESTR: vm.datosMuestras_ARH_AC.length,
-                            TOT_MUESTR_S_OUTL: vm.datosARH_AC.TOT_MUESTR_S_OUTL,
-                            VALOR_MED_HECT_CAL: vm.datosARH_AC.VALOR_MED_HECT_CAL,
-                            VALOR_MED_HECT_S_OUTL: vm.datosARH_AC.VALOR_MED_HECT_S_OUTL,
-                            OUTL_VAL_SUP: vm.datosARH_AC.OUTL_VAL_SUP
-                        };
-                        cvs.saveResultadoPaso("DATOS_GENERALES", dg);
+                            // Almacenamos los valores iniciales de un ARH-AC
+                            var dg = {
+                                ARH: vm.datosARH_AC.ARH,
+                                AC: vm.datosARH_AC.AC,
+                                TOT_MUESTR: vm.datosMuestras_ARH_AC.length,
+                                TOT_MUESTR_S_OUTL: vm.datosARH_AC.TOT_MUESTR_S_OUTL,
+                                VALOR_MED_HECT_CAL: vm.datosARH_AC.VALOR_MED_HECT_CAL,
+                                VALOR_MED_HECT_S_OUTL: vm.datosARH_AC.VALOR_MED_HECT_S_OUTL,
+                                OUTL_VAL_SUP: vm.datosARH_AC.OUTL_VAL_SUP
+                            };
+                            cvs.saveResultadoPaso("DATOS_GENERALES", dg);
 
 
                         
-                        /***********************
-                        console.log("PASO UNO:")    
-                        ***********************/
-                        filtroPasoActual = cvs.evaluaOutlierSuperior();
+                            /***********************
+                            console.log("PASO UNO:")    
+                            ***********************/
+                            filtroPasoActual = cvs.evaluaOutlierSuperior();
 
-                        var mf = cvs.applyFilterMuestras();
-
-                        cvs.saveResultadoPaso("PASO_UNO",
-                        {
-                            TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
-                            NRO_MUESTR_INC: mf.nroIncluidas,
-                            NRO_MUESTR_EXC: mf.nroExcluidas,
-                            REG_MUESTR_EXC: mf.Excluidas,
-                            FILTER: filtroPasoActual,
-                            VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
-                            PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
-                        });
-
-                        informeMapService.renderMapARH("mapaPaso1",
-                                                        colorMapaARH,
-                                                        poblacionARH, colorPoblacion,
-                                                        cvs.muestras, colorMuestraIncluidas,
-                                                        mf.Excluidas, colorMuestraExcluidas);
-
-
-                        //Actualiza las muestras
-                        vm.datosMuestras_ARH_AC = cvs.muestras;                        
-
-                        /***********************
-                        console.log("PASO DOS:");
-                        ***********************/
-                        if (vm.datosMuestras_ARH_AC.length > 0) {
-
-                            // ***** render gráfico de distribución *****
-                            __CreateDistributionGraph(mf.Excluidas);
-
-                            filtroPasoActual = cvs.evaluaDistribucion();
                             mf = cvs.applyFilterMuestras();
-                            distributionService.highlightBars(vm.mixto, mf.Excluidas);
 
-                            //vm.setUserOperations(
-                            cvs.saveResultadoPaso("PASO_DOS",
+                            cvs.saveResultadoPaso("PASO_UNO",
                             {
                                 TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
                                 NRO_MUESTR_INC: mf.nroIncluidas,
@@ -155,10 +123,11 @@
                                 REG_MUESTR_EXC: mf.Excluidas,
                                 FILTER: filtroPasoActual,
                                 VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
+                                VALOR_MEDIANA: cvs.calculateValorMediana(cvs.muestras, 'VTRAS_SUP'),
                                 PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
                             });
 
-                            informeMapService.renderMapARH("mapaPaso2",
+                            informeMapService.renderMapARH("mapaPaso1",
                                                             colorMapaARH,
                                                             poblacionARH, colorPoblacion,
                                                             cvs.muestras, colorMuestraIncluidas,
@@ -166,61 +135,131 @@
 
 
                             //Actualiza las muestras
-                            vm.datosMuestras_ARH_AC = cvs.muestras;
-                        }
-                        else { vm.mostrarPaso2 = false; }
+                            vm.datosMuestras_ARH_AC = cvs.muestras;                        
 
-                        /***********************
-                        console.log("PASO TRES:");
-                        ***********************/
-                        if (vm.datosMuestras_ARH_AC.length > 0) {
+                            /***********************
+                            console.log("PASO DOS:");
+                            ***********************/
+                            if (vm.datosMuestras_ARH_AC.length > 0) {
 
-                            // ***** render gráfico de Regresión ******
-                            vm.configRegressionLogaritmica = {
-                                data: vm.datosMuestras_ARH_AC,
-                                ejeHorizontal: {
-                                    column: 'LOG_SUPERFICIE', text: 'Log. Superficie (m²)'
-                                },
-                                ejeVertical: {
-                                    column: 'LOG_VTRA', text: 'Log. V. Transmision (€)'
-                                },
-                                colorSeleccion: colorMuestraExcluidas,
-                                mouseEnabled: false,
-                                calculate: false,
-                                type: 'LOG'
+                                // ***** render gráfico de distribución *****
+                                __CreateDistributionGraph(mf.Excluidas);
+
+                                filtroPasoActual = cvs.evaluaDistribucion();
+                                mf = cvs.applyFilterMuestras();
+                                distributionService.highlightBars(vm.mixto, mf.Excluidas);
+
+                                //vm.setUserOperations(
+                                cvs.saveResultadoPaso("PASO_DOS",
+                                {
+                                    TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
+                                    NRO_MUESTR_INC: mf.nroIncluidas,
+                                    NRO_MUESTR_EXC: mf.nroExcluidas,
+                                    REG_MUESTR_EXC: mf.Excluidas,
+                                    FILTER: filtroPasoActual,
+                                    VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
+                                    VALOR_MEDIANA: cvs.calculateValorMediana(cvs.muestras, 'VTRAS_SUP'),
+                                    PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
+                                });
+
+                                informeMapService.renderMapARH("mapaPaso2",
+                                                                colorMapaARH,
+                                                                poblacionARH, colorPoblacion,
+                                                                cvs.muestras, colorMuestraIncluidas,
+                                                                mf.Excluidas, colorMuestraExcluidas);
+
+
+                                //Actualiza las muestras
+                                vm.datosMuestras_ARH_AC = cvs.muestras;
                             }
-                            filtroPasoActual = cvs.evaluaRegression(vm.configRegressionLogaritmica);
-                            vm.mixto = regressionService.renderRegression('desRegresionLOG', vm.configRegressionLogaritmica);
-                            mf = cvs.applyFilterMuestras();
+                            else { vm.mostrarPaso2 = false; }
 
-                            //Para actualizar los puntos seleccionados del gráfico
-                            mf.Excluidas.forEach(function (row) {
-                                regressionService.updateRegressionPoint(row.ID_MUESTRA, colorMuestraExcluidas);
-                            });
+                            /***********************
+                            console.log("PASO TRES:");
+                            ***********************/
+                            if (vm.datosMuestras_ARH_AC.length > 0) {
 
-                            cvs.saveResultadoPaso("PASO_TRES",
-                            {
-                                TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
-                                NRO_MUESTR_INC: mf.nroIncluidas,
-                                NRO_MUESTR_EXC: mf.nroExcluidas,
-                                REG_MUESTR_EXC: mf.Excluidas,
-                                FILTER: filtroPasoActual,
-                                VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
-                                PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
-                            });
+                                // ***** render gráfico de Regresión ******
+                                vm.configRegressionLogaritmica = {
+                                    data: vm.datosMuestras_ARH_AC,
+                                    ejeHorizontal: {
+                                        column: 'LOG_SUPERFICIE', text: 'Log. Superficie (m²)'
+                                    },
+                                    ejeVertical: {
+                                        column: 'LOG_VTRA', text: 'Log. V. Transmision (€)'
+                                    },
+                                    colorSeleccion: colorMuestraExcluidas,
+                                    mouseEnabled: false,
+                                    calculate: false,
+                                    type: 'LOG'
+                                }
+                                filtroPasoActual = cvs.evaluaRegression(vm.configRegressionLogaritmica);
+                                vm.mixto = regressionService.renderRegression('desRegresionLOG', vm.configRegressionLogaritmica);
+                                mf = cvs.applyFilterMuestras();
 
-                            informeMapService.renderMapARH("mapaPaso3",
-                                                            colorMapaARH,
-                                                            poblacionARH, colorPoblacion,
-                                                            cvs.muestras, colorMuestraIncluidas,
-                                                            mf.Excluidas, colorMuestraExcluidas);
+                                //Para actualizar los puntos seleccionados del gráfico
+                                mf.Excluidas.forEach(function (row) {
+                                    regressionService.updateRegressionPoint(row.ID_MUESTRA, colorMuestraExcluidas);
+                                });
 
-                            //Actualiza y libera memoria variable
-                            vm.datosMuestras_ARH_AC = cvs.muestras;                            
-                        }
-                        else { vm.mostrarPaso3 = false; }
+                                cvs.saveResultadoPaso("PASO_TRES",
+                                {
+                                    TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
+                                    NRO_MUESTR_INC: mf.nroIncluidas,
+                                    NRO_MUESTR_EXC: mf.nroExcluidas,
+                                    REG_MUESTR_EXC: mf.Excluidas,
+                                    FILTER: filtroPasoActual,
+                                    VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
+                                    VALOR_MEDIANA: cvs.calculateValorMediana(cvs.muestras, 'VTRAS_SUP'),
+                                    PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
+                                });
+
+                                informeMapService.renderMapARH("mapaPaso3",
+                                                                colorMapaARH,
+                                                                poblacionARH, colorPoblacion,
+                                                                cvs.muestras, colorMuestraIncluidas,
+                                                                mf.Excluidas, colorMuestraExcluidas);
+
+                                //Actualiza y libera memoria variable
+                                vm.datosMuestras_ARH_AC = cvs.muestras;                            
+                            }
+                            else { vm.mostrarPaso3 = false; }
+
+
+                            /***********************
+                            console.log("PASO CUATRO:");
+                            ***********************/
+                            if (vm.datosMuestras_ARH_AC.length > 0) {
+
+                                // ***** render gráfico de Regresión ******
+                                vm.configRegressionLineal = {
+                                    data: vm.datosMuestras_ARH_AC,
+                                    ejeHorizontal: { column: 'SUPERFICIE', text: 'Superficie (m²)' },
+                                    ejeVertical: { column: 'VTRA', text: 'V. Transmision (€)' },                                
+                                    mouseEnabled: false,
+                                    calculate: false,
+                                    type: 'LIN'
+                                }
+                                regressionService.getCalculateRegression(vm.configRegressionLineal);
+                                regressionService.renderRegression('desRegresionLIN', vm.configRegressionLineal);
+
+                                cvs.saveResultadoPaso("PASO_CUATRO",
+                                {
+                                    TOT_NRO_MUESTR: cvs.muestras.length,
+                                    VALOR_MEDIO: !vm.configRegressionLineal.valorReg ? 0 : vm.configRegressionLineal.valorReg,
+                                    VALOR_MEDIANA: !vm.configRegressionLineal.valorMedianaReg ? 0 : vm.configRegressionLineal.valorMedianaReg
+                                });
+
+                                //Actualiza y libera memoria variable
+                                //vm.datosMuestras_ARH_AC = cvs.muestras;
+                            }
+                            else { vm.mostrarPaso4 = false; }
                         
-                        vm.resultados = cvs.resultValorARH;
+                            vm.resultados = cvs.resultValorARH;
+                        }
+                        catch(e){
+                            alert("¡¡Error en la fuente de datos!! contácte con sistemas.");
+                        }
                         mf = null;
                     
                         $('#myPleaseWait').modal('hide');

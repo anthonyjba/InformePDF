@@ -1,0 +1,38 @@
+@media print {
+  body, page {
+    margin: 0 !important;
+    box-shadow: 0 !important;
+    background: none !important;
+  }
+  @page {
+    size: A4 portarit;
+    margin: auto;
+  }
+  page[size="A4"] {  
+    width: 21cm !important;
+    height: 29.7cm !important; 
+  }
+  
+  /*img { max-width: 100% !important; }*/
+  div.saltopagina{ 
+      display:block; 
+      page-break-before:always;
+   }
+   #headerPage {
+    margin-left: 30px;
+    padding-top: 15px;
+    margin-bottom: 20px;
+    border-width:1px;
+  }
+   blockquote, table, pre { page-break-inside:avoid; }
+   page blockquote {
+    margin-left: 40px;
+    margin-right: 20px;
+    padding: 0px;
+  }
+  .img-responsive {
+      margin-right : -20px;
+      height: 70px; width: 1200px !important;
+  }
+  
+}
