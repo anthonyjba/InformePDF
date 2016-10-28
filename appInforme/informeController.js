@@ -94,27 +94,27 @@
                             ***********************/
                             var cvs = new calculoValorService(vm.datosMuestras_ARH_AC, vm.datosARH_AC);
 
-                            // Almacenamos los valores iniciales de un ARH-AC
-                            var dg = {
-                                ARH: vm.datosARH_AC.ARH,
-                                AC: vm.datosARH_AC.AC,
-                                TOT_MUESTR: vm.datosMuestras_ARH_AC.length,
-                                TOT_MUESTR_S_OUTL: vm.datosARH_AC.TOT_MUESTR_S_OUTL,
-                                VALOR_MED_HECT_CAL: vm.datosARH_AC.VALOR_MED_HECT_CAL,
-                                VALOR_MED_HECT_S_OUTL: vm.datosARH_AC.VALOR_MED_HECT_S_OUTL,
-                                OUTL_VAL_SUP: vm.datosARH_AC.OUTL_VAL_SUP
-                            };
-                            cvs.saveResultadoPaso("DATOS_GENERALES", dg);
-
-
-                        
                             /***********************
                             console.log("PASO UNO:")    
                             ***********************/
                             filtroPasoActual = cvs.evaluaOutlierSuperior();
 
+                            // Muestras Iniciales de un ARH-AC
+                            var dg = {
+                                ARH: vm.datosARH_AC.ARH,
+                                AC: vm.datosARH_AC.AC,
+                                TOT_MUESTR: vm.datosMuestras_ARH_AC.length,
+                                VALOR_MED_HECT_CAL: vm.datosARH_AC.VALOR_MED_HECT_CAL,
+                                VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
+                                VALOR_MEDIANA: cvs.calculateValorMediana(cvs.muestras, 'VTRAS_SUP'),
+                                OUTL_VAL_SUP: vm.datosARH_AC.OUTL_VAL_SUP
+                            };
+                            cvs.saveResultadoPaso("DATOS_GENERALES", dg);
+
+                            // Filtra y calcula valores medio y mediana
                             mf = cvs.applyFilterMuestras();
 
+                            vm.startPaso1 = 8;
                             cvs.saveResultadoPaso("PASO_UNO",
                             {
                                 TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
@@ -124,7 +124,7 @@
                                 FILTER: filtroPasoActual,
                                 VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
                                 VALOR_MEDIANA: cvs.calculateValorMediana(cvs.muestras, 'VTRAS_SUP'),
-                                PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
+                                PAGES: cvs.calculateNroPages(mf.nroExcluidas - vm.startPaso1, 30)
                             });
 
                             informeMapService.renderMapARH("mapaPaso1",
@@ -149,7 +149,7 @@
                                 mf = cvs.applyFilterMuestras();
                                 distributionService.highlightBars(vm.mixto, mf.Excluidas);
 
-                                //vm.setUserOperations(
+                                vm.startPaso2 = 8;
                                 cvs.saveResultadoPaso("PASO_DOS",
                                 {
                                     TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
@@ -159,7 +159,7 @@
                                     FILTER: filtroPasoActual,
                                     VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
                                     VALOR_MEDIANA: cvs.calculateValorMediana(cvs.muestras, 'VTRAS_SUP'),
-                                    PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
+                                    PAGES: cvs.calculateNroPages(mf.nroExcluidas - vm.startPaso2, 30)
                                 });
 
                                 informeMapService.renderMapARH("mapaPaso2",
@@ -202,6 +202,7 @@
                                     regressionService.updateRegressionPoint(row.ID_MUESTRA, colorMuestraExcluidas);
                                 });
 
+                                vm.startPaso3 = 8;
                                 cvs.saveResultadoPaso("PASO_TRES",
                                 {
                                     TOT_NRO_MUESTR: mf.nroIncluidas + mf.nroExcluidas,
@@ -211,7 +212,7 @@
                                     FILTER: filtroPasoActual,
                                     VALOR_MEDIO: cvs.calculateValorMedio(cvs.muestras, 'VTRAS_SUP'),
                                     VALOR_MEDIANA: cvs.calculateValorMediana(cvs.muestras, 'VTRAS_SUP'),
-                                    PAGES: cvs.calculateNroPages(mf.nroExcluidas, 30)
+                                    PAGES: cvs.calculateNroPages(mf.nroExcluidas - vm.startPaso3, 30)
                                 });
 
                                 informeMapService.renderMapARH("mapaPaso3",
